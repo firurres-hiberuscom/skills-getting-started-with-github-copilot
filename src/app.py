@@ -90,21 +90,30 @@ def get_activities():
     return activities
 
 
+
+# --- Helpers extraídos para pruebas unitarias ---
+def get_activity(activity_name: str):
+    """Devuelve la actividad si existe, si no lanza HTTPException 404"""
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return activities[activity_name]
+
+def validate_not_signed_up(activity: dict, email: str):
+    """Valida que el estudiante no esté ya inscrito, si no lanza HTTPException 400"""
+    if email in activity["participants"]:
+        raise HTTPException(status_code=400, detail="Student already signed up for this activity")
+
+def validate_signed_up(activity: dict, email: str):
+    """Valida que el estudiante esté inscrito, si no lanza HTTPException 404"""
+    if email not in activity["participants"]:
+        raise HTTPException(status_code=404, detail="Participant not found in this activity")
+
+
 @app.post("/activities/{activity_name}/signup")
 def signup_for_activity(activity_name: str, email: str):
     """Sign up a student for an activity"""
-    # Validate activity exists
-    if activity_name not in activities:
-        raise HTTPException(status_code=404, detail="Activity not found")
-
-    # Get the specific activity
-    activity = activities[activity_name]
-
-    # Validate student is not already signed up
-    if email in activity["participants"]:
-        raise HTTPException(status_code=400, detail="Student already signed up for this activity")  
-
-    # Add student
+    activity = get_activity(activity_name)
+    validate_not_signed_up(activity, email)
     activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
 
@@ -113,10 +122,7 @@ def signup_for_activity(activity_name: str, email: str):
 @app.delete("/activities/{activity_name}/signup")
 def remove_participant(activity_name: str, email: str):
     """Remove a student from an activity"""
-    if activity_name not in activities:
-        raise HTTPException(status_code=404, detail="Activity not found")
-    activity = activities[activity_name]
-    if email not in activity["participants"]:
-        raise HTTPException(status_code=404, detail="Participant not found in this activity")
+    activity = get_activity(activity_name)
+    validate_signed_up(activity, email)
     activity["participants"].remove(email)
     return {"message": f"Removed {email} from {activity_name}"}

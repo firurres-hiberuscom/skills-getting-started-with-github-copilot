@@ -1,3 +1,4 @@
+
 """
 High School Management System API
 
@@ -10,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
 from pathlib import Path
+from fastapi import status
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -38,6 +40,42 @@ activities = {
         "schedule": "Mondays, Wednesdays, Fridays, 2:00 PM - 3:00 PM",
         "max_participants": 30,
         "participants": ["john@mergington.edu", "olivia@mergington.edu"]
+    },
+    "Basketball Team": {
+        "description": "Join our competitive basketball team for games and tournaments",
+        "schedule": "Mondays and Wednesdays, 4:00 PM - 5:30 PM",
+        "max_participants": 15,
+        "participants": ["alex@mergington.edu", "james@mergington.edu"]
+    },
+    "Track and Field": {
+        "description": "Train for and compete in track and field events",
+        "schedule": "Tuesdays and Thursdays, 3:45 PM - 5:00 PM",
+        "max_participants": 25,
+        "participants": ["maya@mergington.edu"]
+    },
+    "Art Studio": {
+        "description": "Explore painting, drawing, and mixed media techniques",
+        "schedule": "Wednesdays, 3:30 PM - 5:00 PM",
+        "max_participants": 18,
+        "participants": ["isabella@mergington.edu", "noah@mergington.edu"]
+    },
+    "Music Band": {
+        "description": "Play instruments and perform in the school concert band",
+        "schedule": "Mondays and Fridays, 3:30 PM - 4:30 PM",
+        "max_participants": 20,
+        "participants": ["lucas@mergington.edu"]
+    },
+    "Science Club": {
+        "description": "Conduct experiments and explore scientific concepts through hands-on activities",
+        "schedule": "Thursdays, 3:30 PM - 4:45 PM",
+        "max_participants": 16,
+        "participants": ["ava@mergington.edu", "ethan@mergington.edu"]
+    },
+    "Debate Team": {
+        "description": "Develop public speaking and argumentation skills through debate competitions",
+        "schedule": "Tuesdays, 3:30 PM - 5:00 PM",
+        "max_participants": 12,
+        "participants": ["charlotte@mergington.edu"]
     }
 }
 
@@ -52,16 +90,39 @@ def get_activities():
     return activities
 
 
+
+# --- Helpers extraídos para pruebas unitarias ---
+def get_activity(activity_name: str):
+    """Devuelve la actividad si existe, si no lanza HTTPException 404"""
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return activities[activity_name]
+
+def validate_not_signed_up(activity: dict, email: str):
+    """Valida que el estudiante no esté ya inscrito, si no lanza HTTPException 400"""
+    if email in activity["participants"]:
+        raise HTTPException(status_code=400, detail="Student already signed up for this activity")
+
+def validate_signed_up(activity: dict, email: str):
+    """Valida que el estudiante esté inscrito, si no lanza HTTPException 404"""
+    if email not in activity["participants"]:
+        raise HTTPException(status_code=404, detail="Participant not found in this activity")
+
+
 @app.post("/activities/{activity_name}/signup")
 def signup_for_activity(activity_name: str, email: str):
     """Sign up a student for an activity"""
-    # Validate activity exists
-    if activity_name not in activities:
-        raise HTTPException(status_code=404, detail="Activity not found")
-
-    # Get the specific activity
-    activity = activities[activity_name]
-
-    # Add student
+    activity = get_activity(activity_name)
+    validate_not_signed_up(activity, email)
     activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
+
+
+# Eliminar participante de una actividad
+@app.delete("/activities/{activity_name}/signup")
+def remove_participant(activity_name: str, email: str):
+    """Remove a student from an activity"""
+    activity = get_activity(activity_name)
+    validate_signed_up(activity, email)
+    activity["participants"].remove(email)
+    return {"message": f"Removed {email} from {activity_name}"}
